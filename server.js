@@ -9,7 +9,7 @@ async function getSophiaAuth(email, password) {
   
   try {
     browser = await puppeteer.launch({
-      headless: true,
+      headless: 'new',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -17,10 +17,10 @@ async function getSophiaAuth(email, password) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
-        '--single-process',
-        '--disable-gpu'
-      ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath()
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=site-per-process'
+      ]
     });
 
     const page = await browser.newPage();
