@@ -4,29 +4,23 @@ const puppeteer = require('puppeteer');
 const app = express();
 app.use(express.json());
 
-// At the top of getSophiaAuth function
-const browser = await puppeteer.launch({
-  headless: true,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-accelerated-2d-canvas',
-    '--no-first-run',
-    '--no-zygote',
-    '--single-process',
-    '--disable-gpu'
-  ],
-  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath()
-});
-
 async function getSophiaAuth(email, password) {
   let browser;
   
   try {
     browser = await puppeteer.launch({
-      headless: true, // Set to true for production
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath()
     });
 
     const page = await browser.newPage();
@@ -71,6 +65,10 @@ async function getSophiaAuth(email, password) {
   }
 }
 
+// Cache for cookies
+const cookieCache = new Map();
+const CACHE_DURATION = 25 * 60 * 1000; // 25 minutes
+
 // API endpoint
 app.post('/get-sophia-cookies', async (req, res) => {
   try {
@@ -80,13 +78,34 @@ app.post('/get-sophia-cookies', async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
+    // Check cache first
+    const cacheKey = email;
+    const cached = cookieCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log('Returning cached cookies');
+      return res.json(cached.data);
+    }
+
+    console.log('Getting fresh cookies...');
     const result = await getSophiaAuth(email, password);
+    
+    // Cache the result
+    cookieCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now()
+    });
+
     res.json(result);
     
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Sophia Auth Service Running' });
 });
 
 const PORT = process.env.PORT || 3000;
