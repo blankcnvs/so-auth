@@ -8,25 +8,16 @@ async function getSophiaAuth(email, password) {
   let browser;
   
   try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-features=site-per-process'
-      ]
+    // Connect to browserless.io
+    browser = await puppeteer.connect({
+      browserWSEndpoint: 'wss://chrome.browserless.io?token=2SoCBbU0Bpf6vEec1281a3abe2ce8d3293628efa00491a583'
     });
 
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
 
+    console.log('Navigating to login page...');
     await page.goto('https://app.sophia.org/user_sessions/new.html', {
       waitUntil: 'networkidle2'
     });
@@ -35,6 +26,7 @@ async function getSophiaAuth(email, password) {
     await page.type('input[name="user_session[email]"]', email, { delay: 100 });
     await page.type('input[name="user_session[password]"]', password, { delay: 100 });
     
+    console.log('Submitting login form...');
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'networkidle2' }),
       page.click('button[type="submit"]')
